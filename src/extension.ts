@@ -27,7 +27,7 @@ export function activate(context: ExtensionContext) {
 
 class ReadabilityCheck {
 
-    private _statusBarItem: StatusBarItem;
+    private _statusBarItem?: StatusBarItem = undefined;
 
     public updateReadability() {
 
@@ -232,7 +232,7 @@ class ReadabilityCheck {
 
     public _getWordCount(docContent: string): number {
         let wordCount = 0;
-        wordCount = docContent.match(/\w+/g).length
+        wordCount = (docContent.match(/\w+/g) || []).length
 
         return wordCount;
     }
@@ -252,7 +252,8 @@ class ReadabilityCheck {
         // as well as any words that match : or just a linebreak at the end of an unpunctuated line (eg: lists)
         // TODO: account for Markdown tables?
         let sentenceCount = 0;
-        sentenceCount = docContent.match(/\w[.?!](\s|$)/g).length + docContent.match(/\w:?\n/g).length;
+        // need to do `|| []` to account for words matching that case not existing
+        sentenceCount = (docContent.match(/\w[.?!](\s|$)/g) || []).length + (docContent.match(/\w:?\n/g) || []).length;
 
         // Return the count if more than zero sentences found, otherwise return 1
         return (sentenceCount > 0 ? sentenceCount : 1);
@@ -284,7 +285,7 @@ class ReadabilityCheck {
         let wordList = Array();
 
         // Grab words from document
-        wordList = docContent.match(/\w+/g);
+        wordList = docContent.match(/\w+/g) || [];
 
         for (var i = 0; i < wordList.length; i++) {
             let word = wordList[i];
@@ -300,7 +301,7 @@ class ReadabilityCheck {
         let wordList = Array();
 
         // Grab words from document
-        wordList = docContent.match(/\w+/g);
+        wordList = docContent.match(/\w+/g) || [];
 
         for (var i = 0; i < wordList.length; i++) {
             let word = wordList[i];
@@ -312,7 +313,9 @@ class ReadabilityCheck {
     }
 
     dispose() {
-        this._statusBarItem.dispose();
+        if (this._statusBarItem) {
+            this._statusBarItem.dispose();
+        }
     }
 }
 

@@ -38,6 +38,12 @@ export function activate(context: ExtensionContext) {
         }
         resetDiagnostics();
     }));
+
+    context.subscriptions.push(commands.registerCommand('readabilitycheck.clickStatusBar', () => {
+        readabilityCheck.updateReadability();
+        //TODO: maybe set warn level here, enable/disable warnings, etc?
+        // commands.executeCommand('workbench.action.quickOpen', '> ReadabilityCheck: ');
+    }))
 }
 
 function resetDiagnostics() {
@@ -57,6 +63,7 @@ class ReadabilityCheck {
         // Create as needed
         if (!this._statusBarItem) {
             this._statusBarItem = window.createStatusBarItem(StatusBarAlignment.Left);
+            this._statusBarItem.command = 'readabilitycheck.clickStatusBar';
         }
 
         // Get the current text editor

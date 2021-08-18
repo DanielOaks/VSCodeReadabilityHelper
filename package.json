@@ -88,7 +88,7 @@
         "commands": [
             {
                 "command": "extension.checkReadability",
-                "title": "Check readability"
+                "title": "ReadabilityCheck: Check current document"
             }
         ]
     },

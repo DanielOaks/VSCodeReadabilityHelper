@@ -14,22 +14,22 @@ export function activate(context: ExtensionContext) {
 
     // Use the console to output diagnostic information (console.log) and errors (console.error).
     // This line of code will only be executed once when your extension is activated.
-    console.log('ReadabilityCheck active!');
+    console.log('ReadabilityHelper active!');
 
     // Create the diagnostics (where our warnings for each document live)
-    diagnosticCollection = languages.createDiagnosticCollection('ReadabilityCheck Lints');
+    diagnosticCollection = languages.createDiagnosticCollection('ReadabilityHelper Lints');
     diagnosticMap = new Map();
 
     // Create the readability check
-    let readabilityCheck = new ReadabilityCheck();
-    let controller = new ReadabilityCheckController(readabilityCheck);
+    let readabilityHelper = new ReadabilityHelper();
+    let controller = new ReadabilityHelperController(readabilityHelper);
 
-    let disposable = commands.registerCommand('extension.checkReadability', () => {
-        readabilityCheck.updateReadability();
+    let disposable = commands.registerCommand('readabilityHelper.checkDoc', () => {
+        readabilityHelper.updateReadability();
     });
 
     // Add to a list of disposables which are disposed when this extension is deactivated.
-    context.subscriptions.push(readabilityCheck);
+    context.subscriptions.push(readabilityHelper);
     context.subscriptions.push(controller);
     context.subscriptions.push(disposable);
     context.subscriptions.push(workspace.onDidCloseTextDocument(event => {
@@ -39,10 +39,10 @@ export function activate(context: ExtensionContext) {
         resetDiagnostics();
     }));
 
-    context.subscriptions.push(commands.registerCommand('readabilitycheck.clickStatusBar', () => {
-        readabilityCheck.updateReadability();
+    context.subscriptions.push(commands.registerCommand('readabilityHelper.clickStatusBar', () => {
+        readabilityHelper.updateReadability();
         //TODO: maybe set warn level here, enable/disable warnings, etc?
-        // commands.executeCommand('workbench.action.quickOpen', '> ReadabilityCheck: ');
+        // commands.executeCommand('workbench.action.quickOpen', '> Readability Helper: ');
     }))
 }
 
@@ -54,7 +54,7 @@ function resetDiagnostics() {
     });
 }
 
-class ReadabilityCheck {
+class ReadabilityHelper {
 
     private _statusBarItem?: StatusBarItem = undefined;
 
@@ -63,7 +63,7 @@ class ReadabilityCheck {
         // Create as needed
         if (!this._statusBarItem) {
             this._statusBarItem = window.createStatusBarItem(StatusBarAlignment.Left);
-            this._statusBarItem.command = 'readabilitycheck.clickStatusBar';
+            this._statusBarItem.command = 'readabilityHelper.clickStatusBar';
         }
 
         // Get the current text editor
@@ -78,10 +78,10 @@ class ReadabilityCheck {
         // Only update status if a Markdown or plaintext file
         if ((doc.languageId === 'markdown') || (doc.languageId === 'plaintext')) {
             const config = workspace.getConfiguration();
-            const configuredFormula = config.get<string>('readabilityCheck.formula');
+            const configuredFormula = config.get<string>('readabilityHelper.formula');
 
-            const warningsEnabled = config.get<boolean>('readabilityCheck.warningsEnabled') || false;
-            const warnScoreName = `readabilityCheck.warnScore.${configuredFormula}`;
+            const warningsEnabled = config.get<boolean>('readabilityHelper.warningsEnabled') || false;
+            const warnScoreName = `readabilityHelper.warnScore.${configuredFormula}`;
             const warnScore: number = config.get<number>(warnScoreName) || 0;
 
             let formula = 'Readability';
@@ -451,13 +451,13 @@ class ReadabilityCheck {
     }
 }
 
-class ReadabilityCheckController {
+class ReadabilityHelperController {
 
-    private _readabilityCheck: ReadabilityCheck;
+    private _readabilityHelper: ReadabilityHelper;
     private _disposable: Disposable;
 
-    constructor(readabilityCheck: ReadabilityCheck) {
-        this._readabilityCheck = readabilityCheck;
+    constructor(readabilityHelper: ReadabilityHelper) {
+        this._readabilityHelper = readabilityHelper;
 
         // Update the readability counter when the file is opened or saved
         let subscriptions: Disposable[] = [];
@@ -465,7 +465,7 @@ class ReadabilityCheckController {
         workspace.onDidSaveTextDocument(this._onEvent, this, subscriptions);
 
         // Update the counter for the current file
-        this._readabilityCheck.updateReadability();
+        this._readabilityHelper.updateReadability();
 
         // Create a combined disposable from both event subscriptions
         this._disposable = Disposable.from(...subscriptions);
@@ -476,6 +476,6 @@ class ReadabilityCheckController {
     }
 
     private _onEvent() {
-        this._readabilityCheck.updateReadability();
+        this._readabilityHelper.updateReadability();
     }
 }

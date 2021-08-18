@@ -1,9 +1,9 @@
-# ReadabilityCheck
+# Readability Helper
 
 This extension provides a quick-and-easy display of the readability score of text in plain text or Markdown files when a file is opened or saved, or when the "Check readability" command is run (Ctrl + Shift + P, "Check readability").
 
 ## Features
-Currently supported readability score formulas include:
+Supported readability score formulas include:
 * Automated Readability Index
 * Coleman-Liau Index
 * Dale-Chall Readability Formula
@@ -11,7 +11,7 @@ Currently supported readability score formulas include:
 * Flesch-Kincaid Grade Level
 * Simple Measure of Gobbledygook (SMOG) Formula
 
-Currently supported languages include:
+Supported languages include:
 * Plain text files
 * Markdown
 
@@ -109,7 +109,7 @@ The familiar words list is provided by the [spache](https://github.com/words/spa
 
 This extension supports the following settings:
 
-* `readabilityCheck.formula`: determines which algorithm to use for scoring
+* `readabilityHelper.formula`: determines which algorithm to use for scoring
 
 Score can be any of the below options:
 * `automated-readability`, for the Automated Readability Index score
@@ -121,24 +121,6 @@ Score can be any of the below options:
 * `sprache`, for the Sprache Readability Formula
 
 If unset, the extension will default to `automated-readability`.
-
-## Release Notes
-
-### 1.0.0
-
-Initial release of ReadabilityCheck
-
-### 1.1.0
-
-Add Markdown format stripping to make the wordcount/character counts more accurate, to improve score accuracy.
-
-### 1.2.0
-
-Update extension to add user settings options.
-
-### 1.3.0
-
-Fix wordcounts and word list parsing to improve accuracy for Dale-Chall, Coleman-Liau, and SMOG formulas
 
 ## License
 This extension is released under the MIT license.

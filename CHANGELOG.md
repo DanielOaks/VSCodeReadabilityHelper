@@ -1,7 +1,22 @@
 # Change Log
-All notable changes to the "readability" extension will be documented in this file.
-
-Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
+All notable changes to Readability Helper are documented in this file.
 
 ## [Unreleased]
-- Initial release
+
+- Extension forked and renamed to Readability Helper.
+
+## [1.3.0]
+
+Fix wordcounts and word list parsing to improve accuracy for Dale-Chall, Coleman-Liau, and SMOG formulas.
+
+## [1.2.0]
+
+Update extension to add user settings options.
+
+## [1.1.0]
+
+Add Markdown format stripping to make the wordcount/character counts more accurate, to improve score accuracy.
+
+## [1.0.0]
+
+Initial release of ReadabilityCheck.

@@ -11,8 +11,10 @@
         "type": "git",
         "url": "git://github.com/DanielOaks/VSCodeReadabilityHelper.git"
     },
+    "icon": "icon.png",
     "license": "MIT",
     "categories": [
+        "Linters",
         "Other"
     ],
     "activationEvents": [

@@ -22,7 +22,7 @@ export function getAutomatedReadabilityDoc(docContent: string): number {
 
 // Calculate readability based on the Coleman-Liau index formula
 function calculateColemanLiau(sentences: number, words: number, characters: number): number {
-    return (0.0588 * ((characters / words) * 100)) - (0.296 * ((sentences / words) * 100)) - 15.8
+    return (0.0588 * ((characters / words) * 100)) - (0.296 * ((sentences / words) * 100)) - 15.8;
 }
 
 export function getColemanLiauSentence(sentence: string): number {
@@ -47,7 +47,7 @@ function calculateDaleChall(sentences: number, words: number, difficultWordPerce
     // Account for the raw score offset if the difficult word percentage is above 5%
     score += (difficultWordPercentage > 5) ? 3.6365 : 0;
 
-    return score
+    return score;
 }
 
 export function getDaleChallSentence(sentence: string): number {
@@ -118,7 +118,7 @@ export function getSMOGSentence(sentence: string): number {
 
     // SMOG needs at least 30 sentences to calculate its score properly...
     //  so we fake it here. I'm not sure if this is actually required.
-    return calculateSMOG(30, polysyllables * 30)
+    return calculateSMOG(30, polysyllables * 30);
 }
 
 export function getSMOGDoc(docContent: string): number {
@@ -151,7 +151,7 @@ export function getSpacheDoc(docContent: string): number {
 // helper functions
 function getWordCount(docContent: string): number {
     let wordCount = 0;
-    wordCount = (docContent.match(/\w+/g) || []).length
+    wordCount = (docContent.match(/\w+/g) || []).length;
 
     return wordCount;
 }
@@ -179,7 +179,8 @@ function getSentenceCount(docContent: string): number {
 }
 
 function getSyllableCount(docContent: string): number {
-    let syllable = require('syllable');        
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const syllable = require('syllable');
     let syllableCount = 0;
 
     syllableCount = syllable(docContent);
@@ -188,25 +189,28 @@ function getSyllableCount(docContent: string): number {
 }
 
 function getDifficultWordCount(docContent: string, vocabulary: string): number {
+    let familiarWords;
     switch (vocabulary) {
         case 'dale-chall':
-            var familiarWords = require('dale-chall');
+            // eslint-disable-next-line @typescript-eslint/no-var-requires
+            familiarWords = require('dale-chall');
             break;
         case 'spache':
-            var familiarWords = require('spache');
+            // eslint-disable-next-line @typescript-eslint/no-var-requires
+            familiarWords = require('spache');
             break;
         default:
             return 0;
     }
-    
+
     let difficultWordCount = 0;
-    let wordList = Array();
+    let wordList = [];
 
     // Grab words from document
     wordList = docContent.match(/\w+/g) || [];
 
-    for (var i = 0; i < wordList.length; i++) {
-        let word = wordList[i];
+    for (let i = 0; i < wordList.length; i++) {
+        const word = wordList[i];
         difficultWordCount += (familiarWords.indexOf(word) > -1) ? 1 : 0;
     }
 
@@ -214,15 +218,16 @@ function getDifficultWordCount(docContent: string, vocabulary: string): number {
 }
 
 function getPolysyllabicWordCount(docContent: string): number {
-    let syllable = require('syllable');       
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const syllable = require('syllable');
     let polysyllabicWordCount = 0;
-    let wordList = Array();
+    let wordList = [];
 
     // Grab words from document
     wordList = docContent.match(/\w+/g) || [];
 
-    for (var i = 0; i < wordList.length; i++) {
-        let word = wordList[i];
+    for (let i = 0; i < wordList.length; i++) {
+        const word = wordList[i];
         polysyllabicWordCount += (syllable(word) >= 3 ) ? 1 : 0;
     }
     // console.log('Polysyllabic words: ' + polysyllabicWordCount);

@@ -22,10 +22,10 @@ export function activate(context: ExtensionContext) {
     diagnosticMap = new Map();
 
     // Create the readability check
-    let readabilityHelper = new ReadabilityHelper();
-    let controller = new ReadabilityHelperController(readabilityHelper);
+    const readabilityHelper = new ReadabilityHelper();
+    const controller = new ReadabilityHelperController(readabilityHelper);
 
-    let disposable = commands.registerCommand('readabilityHelper.checkDoc', () => {
+    const disposable = commands.registerCommand('readabilityHelper.checkDoc', () => {
         readabilityHelper.updateReadability();
     });
 
@@ -44,7 +44,7 @@ export function activate(context: ExtensionContext) {
         readabilityHelper.updateReadability();
         //TODO: maybe set warn level here, enable/disable warnings, etc?
         // commands.executeCommand('workbench.action.quickOpen', '> Readability Helper: ');
-    }))
+    }));
 }
 
 function resetDiagnostics() {
@@ -68,13 +68,13 @@ class ReadabilityHelper {
         }
 
         // Get the current text editor
-        let editor = window.activeTextEditor;
+        const editor = window.activeTextEditor;
         if (!editor) {
             this._statusBarItem.hide();
             return;
         }
 
-        let doc = editor.document;
+        const doc = editor.document;
 
         // Only update status if a Markdown or plaintext file
         if ((doc.languageId === 'markdown') || (doc.languageId === 'plaintext')) {
@@ -88,6 +88,7 @@ class ReadabilityHelper {
             let formula = 'Readability';
             let readability = 0;
 
+            // eslint-disable-next-line @typescript-eslint/no-var-requires
             const removeMd = require('remove-markdown');
             const rawDocContent = doc.getText();
             const docContent: string = removeMd(rawDocContent);
@@ -139,7 +140,7 @@ class ReadabilityHelper {
 
             // fix doc and sentence functions
             docFunction = docFunction.bind(this);
-            sentenceFunction = sentenceFunction.bind(this)
+            sentenceFunction = sentenceFunction.bind(this);
 
             readability = docFunction(docContent);
 
@@ -154,15 +155,15 @@ class ReadabilityHelper {
             }
 
             // let's figure out the most difficult ones
-            let diagnostics: Diagnostic[] = [];
+            const diagnostics: Diagnostic[] = [];
             if (shouldWarn) {
                 console.log("This document isn't very readable ;-;");
 
                 // difficulty score : sentence
-                let sentencesByDifficulty: [number, string][] = [];
+                const sentencesByDifficulty: [number, string][] = [];
 
                 // lazy splitting into sentences
-                const sentences: string[] = docContent.match(/([^\.!\?]+[\.!\?]+)|([^\.!\?]+$)/g) || [];
+                const sentences: string[] = docContent.match(/([^.!?]+[.!?]+)|([^.!?]+$)/g) || [];
 
                 sentences.forEach(sentence => {
                     sentence = sentence.trim();
@@ -182,7 +183,7 @@ class ReadabilityHelper {
                     }
                 });
 
-                let cleanedWarnIndexes: [number, number][] = [];
+                const cleanedWarnIndexes: [number, number][] = [];
 
                 sentencesByDifficulty.forEach(data => {
                     const sentence = data[1];
@@ -233,7 +234,7 @@ class ReadabilityHelperController {
         this._readabilityHelper = readabilityHelper;
 
         // Update the readability counter when the file is opened or saved
-        let subscriptions: Disposable[] = [];
+        const subscriptions: Disposable[] = [];
         workspace.onDidOpenTextDocument(this._onEvent, this, subscriptions);
         workspace.onDidSaveTextDocument(this._onEvent, this, subscriptions);
 

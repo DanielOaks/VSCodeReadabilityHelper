@@ -28,7 +28,7 @@ export class SeamFinder {
                 }
                 strippedIndex += 1;
             } else if (seamStart === -1) {
-                seamStart = originalIndex
+                seamStart = originalIndex;
             }
             originalIndex += 1;
         }
@@ -50,7 +50,7 @@ export class SeamFinder {
                 endResult += currentSeam[1];
             }
 
-            seamIndex += 1
+            seamIndex += 1;
         }
 
         return new SeamLookup(startResult + startIndex, length + endResult - startResult);

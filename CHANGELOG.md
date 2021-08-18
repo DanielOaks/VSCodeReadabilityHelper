@@ -1,7 +1,7 @@
 # Change Log
 All notable changes to Readability Helper are documented in this file.
 
-## [Unreleased]
+## [1.4.0]
 
 - Extension forked and renamed to Readability Helper.
 - Now easier to select which readability formula to use (it's now a dropdown list instead of a textbox).

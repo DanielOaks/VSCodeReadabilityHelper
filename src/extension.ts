@@ -76,7 +76,7 @@ class ReadabilityCheck {
         let doc = editor.document;
 
         // Only update status if a Markdown or plaintext file
-        if ((doc.languageId === "markdown") || (doc.languageId === "plaintext")) {
+        if ((doc.languageId === 'markdown') || (doc.languageId === 'plaintext')) {
             const config = workspace.getConfiguration();
             const configuredFormula = config.get<string>('readabilityCheck.formula');
 
@@ -92,37 +92,44 @@ class ReadabilityCheck {
             const docContent: string = removeMd(rawDocContent);
 
             // select formula and readability function
-            let sentenceFunction = this._getFleschSentence;
-            let docFunction = this._getAutomatedReadability;
+            let sentenceFunction = this._getAutomatedReadabilitySentence;
+            let docFunction = this._getAutomatedReadabilityDoc;
 
             switch (configuredFormula) {
                 case 'flesch':
                     formula = 'Flesch Reading Ease';
+                    sentenceFunction = this._getFleschSentence;
                     docFunction = this._getFleschDoc;
                     break;
                 case 'flesch-kincaid':
                     formula = 'Flesch-Kincaid Grade Level';
-                    docFunction = this._getFleschKincaid;
+                    sentenceFunction = this._getFleschKincaidSentence;
+                    docFunction = this._getFleschKincaidDoc;
                     break;
                 case 'coleman-liau':
                     formula = 'Coleman-Liau Index';
-                    docFunction = this._getColemanLiau;
+                    sentenceFunction = this._getColemanLiauSentence;
+                    docFunction = this._getColemanLiauDoc;
                     break;
                 case 'dale-chall':
                     formula = 'Dale-Chall Readability';
-                    docFunction = this._getDaleChall;
+                    sentenceFunction = this._getDaleChallSentence;
+                    docFunction = this._getDaleChallDoc;
                     break;
                 case 'smog':
                     formula = 'SMOG Formula';
-                    docFunction = this._getSMOG;
+                    sentenceFunction = this._getSMOGSentence;
+                    docFunction = this._getSMOGDoc;
                     break;
                 case 'spache':
                     formula = 'Spache Readability';
-                    docFunction = this._getSpache;
+                    sentenceFunction = this._getSpacheSentence;
+                    docFunction = this._getSpacheDoc;
                     break;
                 default:
                     formula = 'Automated Readability';
-                    docFunction = this._getAutomatedReadability;
+                    sentenceFunction = this._getAutomatedReadabilitySentence;
+                    docFunction = this._getAutomatedReadabilityDoc;
                     break;
             }
 
@@ -143,6 +150,7 @@ class ReadabilityCheck {
             }
 
             // let's figure out the most difficult ones
+            let diagnostics: Diagnostic[] = [];
             if (shouldWarn) {
                 console.log("This document isn't very readable ;-;");
 
@@ -187,17 +195,15 @@ class ReadabilityCheck {
                 const sf = new SeamFinder(rawDocContent, docContent);
 
                 // add warnings for each set of indexes
-                let diagnostics: Diagnostic[] = [];
                 cleanedWarnIndexes.forEach(indexSet => {
                     const realIndexes = sf.lookup(indexSet[0], indexSet[1]);
                     const start = doc.positionAt(realIndexes.start);
                     const end = doc.positionAt(realIndexes.start + realIndexes.length);
                     diagnostics.push(new Diagnostic(new Range(start, end), 'This sentence is difficult to read', DiagnosticSeverity.Warning));
                 });
-
-                diagnosticMap.set(doc.uri.toString(), diagnostics);
-                resetDiagnostics();
             }
+            diagnosticMap.set(doc.uri.toString(), diagnostics);
+            resetDiagnostics();
 
             // Update the status bar
             this._statusBarItem.text = `${formula} score: ${readability}`;
@@ -207,67 +213,72 @@ class ReadabilityCheck {
         }
     }
 
-    public _getAutomatedReadability(docContent: string): number {
-        let autoRead = 0;
-
-        let sentenceCount = this._getSentenceCount(docContent);
-        console.log("Sentence count: " + sentenceCount);
-
-        let wordCount = this._getWordCount(docContent);
-        console.log("Word count: " + wordCount);
-
-        let charCount = this._getCharacterCount(docContent);
-        console.log("Character count: " + charCount);
-
-        // Calculate readability based on the Automated Readability Index formula
-        autoRead = (4.71 * (charCount / wordCount)) + (0.5 * (wordCount / sentenceCount)) - 21.43;
-        console.log("Calculated Automatic Readability score: " + autoRead);
-
-        // Scores are always rounded up to the nearest integer
-        return Math.ceil(autoRead);
+    // Calculate readability based on the Automated Readability Index formula
+    private _calculateAutomatedReadability(sentences: number, words: number, characters: number): number {
+    return (4.71 * (characters / words)) + (0.5 * (words / sentences)) - 21.43;
     }
 
-    public _getColemanLiau(docContent: string): number {
-        let colemanLiauRead = 0;
+    public _getAutomatedReadabilitySentence(sentence: string): number {
+        const words = this._getWordCount(sentence);
+        const characters = this._getCharacterCount(sentence);
 
-        let sentenceCount = this._getSentenceCount(docContent);
-        console.log("Sentence count: " + sentenceCount);
-
-        let wordCount = this._getWordCount(docContent);
-        console.log("Word count: " + wordCount);
-
-        let charCount = this._getCharacterCount(docContent);
-        console.log("Syllable count: " + charCount);
-
-        // Calculate readability based on the Coleman-Liau index formula
-        colemanLiauRead = (0.0588 * ((charCount / wordCount) * 100)) - (0.296 * ((sentenceCount / wordCount) * 100)) - 15.8
-        console.log("Calculated Coleman-Liau index score: " + colemanLiauRead);
-
-        return Math.round(colemanLiauRead);
+        return this._calculateAutomatedReadability(1, words, characters);
     }
 
-    public _getDaleChall(docContent: string): number {
-        let daleChallRead = 0;
+    public _getAutomatedReadabilityDoc(docContent: string): number {
+        const sentences = this._getSentenceCount(docContent);
+        const words = this._getWordCount(docContent);
+        const characters = this._getCharacterCount(docContent);
 
-        let sentenceCount = this._getSentenceCount(docContent);
-        console.log("Sentence count: " + sentenceCount);
+        return Math.ceil(this._calculateAutomatedReadability(sentences, words, characters));
+    }
 
-        let wordCount = this._getWordCount(docContent);
-        console.log("Word count: " + wordCount);
+    // Calculate readability based on the Coleman-Liau index formula
+    private _calculateColemanLiau(sentences: number, words: number, characters: number): number {
+        return (0.0588 * ((characters / words) * 100)) - (0.296 * ((sentences / words) * 100)) - 15.8
+    }
 
-        let difficultWordCount = this._getDifficultWordCount(docContent, "dale-chall");
-        console.log("Difficult word count: " + difficultWordCount);
+    public _getColemanLiauSentence(sentence: string): number {
+        const words = this._getWordCount(sentence);
+        const characters = this._getCharacterCount(sentence);
 
-        let difficultWordPercentage = (difficultWordCount / wordCount) * 100;
+        return this._calculateColemanLiau(1, words, characters);
+    }
 
-        // Calculate readability based on the Dale-Chall Readability Formula
-        daleChallRead = (0.1579 * difficultWordPercentage) + (0.0496 * (wordCount / sentenceCount))
+    public _getColemanLiauDoc(docContent: string): number {
+        const sentences = this._getSentenceCount(docContent);
+        const words = this._getWordCount(docContent);
+        const characters = this._getCharacterCount(docContent);
+
+        return Math.round(this._calculateColemanLiau(sentences, words, characters));
+    }
+
+    // Calculate readability based on the Dale-Chall Readability Formula
+    private _calculateDaleChall(sentences: number, words: number, difficultWordPercentage: number): number {
+        let score = (0.1579 * difficultWordPercentage) + (0.0496 * (words / sentences));
+
         // Account for the raw score offset if the difficult word percentage is above 5%
-        daleChallRead += (difficultWordPercentage > 5) ? 3.6365 : 0;
-        console.log("Calculated Dale Chall Readability Formula score: " + daleChallRead);
+        score += (difficultWordPercentage > 5) ? 3.6365 : 0;
+
+        return score
+    }
+
+    public _getDaleChallSentence(sentence: string): number {
+        const words = this._getWordCount(sentence);
+        const difficultWordCount = this._getDifficultWordCount(sentence, 'dale-chall');
+        const difficultWordPercentage = (difficultWordCount / words) * 100;
+
+        return this._calculateDaleChall(1, words, difficultWordPercentage);
+    }
+
+    public _getDaleChallDoc(docContent: string): number {
+        const sentences = this._getSentenceCount(docContent);
+        const words = this._getWordCount(docContent);
+        const difficultWordCount = this._getDifficultWordCount(docContent, 'dale-chall');
+        const difficultWordPercentage = (difficultWordCount / words) * 100;
 
         // Return number with up to one decimal point
-        return Number(daleChallRead.toFixed(1));
+        return Number(this._calculateDaleChall(sentences, words, difficultWordPercentage).toFixed(1));
     }
 
     // Calculate readability based on the Flesch Readability Ease formula
@@ -290,60 +301,67 @@ class ReadabilityCheck {
         return Math.round(this._calculateFlesch(sentences, words, syllables));
     }
 
-    public _getFleschKincaid(docContent: string): number {
-        let fleschKincaidRead = 0;
-
-        let sentenceCount = this._getSentenceCount(docContent);
-        console.log("Sentence count: " + sentenceCount);
-
-        let wordCount = this._getWordCount(docContent);
-        console.log("Word count: " + wordCount);
-
-        let syllableCount = this._getSyllableCount(docContent);
-        console.log("Syllable count: " + syllableCount);
-
-        // Calculate readability based on the Flesch-Kincaid Grade Level formula
-        fleschKincaidRead = (0.39 * (wordCount / sentenceCount)) + (11.8 * (syllableCount / wordCount)) - 15.59;
-        console.log("Calculated Flesch-Kincaid U.S. Grade Level score: " + fleschKincaidRead);
-
-        return Math.round(fleschKincaidRead);
+    // Calculate readability based on the Flesch-Kincaid Grade Level formula
+    private _calculateFleschKincaid(sentences: number, words: number, syllables: number): number {
+        return (0.39 * (words / sentences)) + (11.8 * (syllables / words)) - 15.59;
     }
 
-    public _getSMOG(docContent: string): number {
-        let SMOGRead = 0;
+    public _getFleschKincaidSentence(sentence: string): number {
+        const words = this._getWordCount(sentence);
+        const syllables = this._getSyllableCount(sentence);
 
-        let sentenceCount = this._getSentenceCount(docContent);
-        console.log("Sentence count: " + sentenceCount);
-
-        let polysyllableCount = this._getPolysyllabicWordCount(docContent);
-        console.log("Syllable count: " + polysyllableCount);
-
-        // Calculate readability based on the Flesch-Kincaid Grade Level formula
-        SMOGRead = 3.1291 + (1.0430 * Math.sqrt(polysyllableCount * (30 / sentenceCount)));
-        console.log("Calculated Simple Measure of Gobbledygook (SMOG) Index score: " + SMOGRead);
-
-        return Math.round(SMOGRead);
+        return Math.round(this._calculateFleschKincaid(1, words, syllables));
     }
 
-    public _getSpache(docContent: string): number {
-        let spacheRead = 0;
+    public _getFleschKincaidDoc(docContent: string): number {
+        const sentences = this._getSentenceCount(docContent);
+        const words = this._getWordCount(docContent);
+        const syllables = this._getSyllableCount(docContent);
 
-        let sentenceCount = this._getSentenceCount(docContent);
-        console.log("Sentence count: " + sentenceCount);
-
-        let wordCount = this._getWordCount(docContent);
-        console.log("Word count: " + wordCount);
-
-        let difficultWordCount = this._getDifficultWordCount(docContent, "spache");
-        console.log("Difficult word count: " + difficultWordCount);
-
-        // Calculate readability based on the Dale-Chall Readability Formula
-        spacheRead = 0.659 + (0.121 * (wordCount / sentenceCount)) + (0.082 * ((difficultWordCount / wordCount) * 100));
-        console.log("Calculated Spache Readability Formula score: " + spacheRead);
-
-        return Math.round(spacheRead);
+        return Math.round(this._calculateFleschKincaid(sentences, words, syllables));
     }
 
+    // Calculate readability based on the Flesch-Kincaid Grade Level formula
+    private _calculateSMOG(sentences: number, polysyllables: number): number {
+        return 3.1291 + (1.0430 * Math.sqrt(polysyllables * (30 / sentences)));
+    }
+
+    public _getSMOGSentence(sentence: string): number {
+        const polysyllables = this._getPolysyllabicWordCount(sentence);
+
+        // SMOG needs at least 30 sentences to calculate its score properly...
+        //  so we fake it here. I'm not sure if this is actually required.
+        return this._calculateSMOG(30, polysyllables * 30)
+    }
+
+    public _getSMOGDoc(docContent: string): number {
+        const sentences = this._getSentenceCount(docContent);
+        const polysyllables = this._getPolysyllabicWordCount(docContent);
+
+        return Math.round(this._calculateSMOG(sentences, polysyllables));
+    }
+
+    // Calculate readability based on the Spache Readability Formula
+    private _calculateSpache(sentences: number, words: number, difficultWords: number): number {
+        return 0.659 + (0.121 * (words / sentences)) + (0.082 * ((difficultWords / words) * 100));
+    }
+
+    public _getSpacheSentence(sentence: string): number {
+        const words = this._getWordCount(sentence);
+        const difficultWords = this._getDifficultWordCount(sentence, 'spache');
+
+        return this._calculateSpache(1, words, difficultWords);
+    }
+
+    public _getSpacheDoc(docContent: string): number {
+        const sentences = this._getSentenceCount(docContent);
+        const words = this._getWordCount(docContent);
+        const difficultWords = this._getDifficultWordCount(docContent, 'spache');
+
+        return Math.round(this._calculateSpache(1, words, difficultWords));
+    }
+
+    // helper functions
     public _getWordCount(docContent: string): number {
         let wordCount = 0;
         wordCount = (docContent.match(/\w+/g) || []).length
@@ -385,10 +403,10 @@ class ReadabilityCheck {
         
     public _getDifficultWordCount(docContent: string, vocabulary: string): number {
         switch (vocabulary) {
-            case "dale-chall":
+            case 'dale-chall':
                 var familiarWords = require('dale-chall');
                 break;
-            case "spache":
+            case 'spache':
                 var familiarWords = require('spache');
                 break;
             default:
@@ -421,7 +439,7 @@ class ReadabilityCheck {
             let word = wordList[i];
             polysyllabicWordCount += (syllable(word) >= 3 ) ? 1 : 0;
         }
-        console.log("Polysyllabic words: " + polysyllabicWordCount);
+        // console.log('Polysyllabic words: ' + polysyllabicWordCount);
 
         return polysyllabicWordCount;
     }

@@ -81,9 +81,9 @@ class ReadabilityHelper {
             const config = workspace.getConfiguration();
             const configuredFormula = config.get<string>('readabilityHelper.formula');
 
-            const warningsEnabled = config.get<boolean>('readabilityHelper.warningsEnabled') || false;
-            const warnScoreName = `readabilityHelper.warnScore.${configuredFormula}`;
-            const warnScore: number = config.get<number>(warnScoreName) || 0;
+            const highlightDifficultSentences = config.get<boolean>('readabilityHelper.highlightDifficultSentences') || false;
+            const maxDifficultyScoreName = `readabilityHelper.maxDifficultyScore.${configuredFormula}`;
+            const maxDifficultyScore: number = config.get<number>(maxDifficultyScoreName) || 0;
 
             let formula = 'Readability';
             let readability = 0;
@@ -95,12 +95,15 @@ class ReadabilityHelper {
             // select formula and readability function
             let sentenceFunction = readabilityTests.getAutomatedReadabilitySentence;
             let docFunction = readabilityTests.getAutomatedReadabilityDoc;
+            // this controls how we compare scores to the configured max ones
+            let lowerScoreIsEasier = true;
 
             switch (configuredFormula) {
                 case 'flesch':
                     formula = 'Flesch Reading Ease';
                     sentenceFunction = readabilityTests.getFleschSentence;
                     docFunction = readabilityTests.getFleschDoc;
+                    lowerScoreIsEasier = false;
                     break;
                 case 'flesch-kincaid':
                     formula = 'Flesch-Kincaid Grade Level';
@@ -142,11 +145,11 @@ class ReadabilityHelper {
 
             // should we warn for difficult sentences?
             let shouldWarn = false;
-            if (warningsEnabled) {
-                if (configuredFormula === 'flesch') {
-                    shouldWarn = readability < warnScore;
+            if (highlightDifficultSentences) {
+                if (lowerScoreIsEasier) {
+                    shouldWarn = readability > maxDifficultyScore;
                 } else {
-                    shouldWarn = readability > warnScore;
+                    shouldWarn = readability < maxDifficultyScore;
                 }
             }
 
@@ -168,10 +171,10 @@ class ReadabilityHelper {
                     sentencesByDifficulty.push([score, sentence]);
 
                     // sort by most difficult to least
-                    if (configuredFormula === 'flesch') {
-                        sentencesByDifficulty.sort((a, b) => a[0] - b[0]);
-                    } else {
+                    if (lowerScoreIsEasier) {
                         sentencesByDifficulty.sort((a, b) => b[0] - a[0]);
+                    } else {
+                        sentencesByDifficulty.sort((a, b) => a[0] - b[0]);
                     }
                     // only keep 3 most difficult sentences
                     while (sentencesByDifficulty.length > 3) {

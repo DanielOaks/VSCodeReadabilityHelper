@@ -28,7 +28,7 @@
                 "properties": {
                     "readabilityHelper.formula": {
                         "type": "string",
-                        "default": "automated-readability",
+                        "default": "flesch",
                         "description": "The formula to use for calculating readability score",
                         "scope": "resource",
                         "enum": [

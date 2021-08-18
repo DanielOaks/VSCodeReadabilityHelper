@@ -1,7 +1,12 @@
 'use strict';
 // The module 'vscode' contains the VS Code extensibility API
 // Import the necessary extensibility types to use in your code below
-import {window, workspace, commands, Disposable, ExtensionContext, StatusBarAlignment, StatusBarItem, TextDocument} from 'vscode';
+import {window, workspace, commands, Disposable, languages, Uri, ExtensionContext, StatusBarAlignment, StatusBarItem, TextDocument, CommentThreadCollapsibleState, Diagnostic, DiagnosticCollection, Range, DiagnosticSeverity} from 'vscode';
+
+import {SeamFinder} from './seamFinder';
+
+let diagnosticCollection: DiagnosticCollection;
+let diagnosticMap: Map<string, Diagnostic[]>;
 
 // This method is called when your extension is activated. Activation is
 // controlled by the activation events defined in package.json.
@@ -9,7 +14,11 @@ export function activate(context: ExtensionContext) {
 
     // Use the console to output diagnostic information (console.log) and errors (console.error).
     // This line of code will only be executed once when your extension is activated.
-    console.log('Congratulations, your extension "Readability" is now active!');
+    console.log('ReadabilityCheck active!');
+
+    // Create the diagnostics (where our warnings for each document live)
+    diagnosticCollection = languages.createDiagnosticCollection('ReadabilityCheck Lints');
+    diagnosticMap = new Map();
 
     // Create the readability check
     let readabilityCheck = new ReadabilityCheck();
@@ -23,6 +32,20 @@ export function activate(context: ExtensionContext) {
     context.subscriptions.push(readabilityCheck);
     context.subscriptions.push(controller);
     context.subscriptions.push(disposable);
+    context.subscriptions.push(workspace.onDidCloseTextDocument(event => {
+        if (diagnosticMap.has(event.uri.toString())) {
+            diagnosticMap.delete(event.uri.toString());
+        }
+        resetDiagnostics();
+    }));
+}
+
+function resetDiagnostics() {
+    diagnosticCollection.clear();
+
+    diagnosticMap.forEach((diags, file) => {
+        diagnosticCollection.set(Uri.parse(file), diags);
+    });
 }
 
 class ReadabilityCheck {
@@ -47,43 +70,126 @@ class ReadabilityCheck {
 
         // Only update status if a Markdown or plaintext file
         if ((doc.languageId === "markdown") || (doc.languageId === "plaintext")) {
-            const configuredFormula = workspace.getConfiguration().get('readabilityCheck.formula');
+            const config = workspace.getConfiguration();
+            const configuredFormula = config.get<string>('readabilityCheck.formula');
+
+            const warningsEnabled = config.get<boolean>('readabilityCheck.warningsEnabled') || false;
+            const warnScoreName = `readabilityCheck.warnScore.${configuredFormula}`;
+            const warnScore: number = config.get<number>(warnScoreName) || 0;
 
             let formula = 'Readability';
             let readability = 0;
 
-            let removeMd = require('remove-markdown');
-            let docContent = removeMd(doc.getText());
+            const removeMd = require('remove-markdown');
+            const rawDocContent = doc.getText();
+            const docContent: string = removeMd(rawDocContent);
+
+            // select formula and readability function
+            let sentenceFunction = this._getFleschSentence;
+            let docFunction = this._getAutomatedReadability;
 
             switch (configuredFormula) {
                 case 'flesch':
                     formula = 'Flesch Reading Ease';
-                    readability = this._getFlesch(docContent);
+                    docFunction = this._getFleschDoc;
                     break;
                 case 'flesch-kincaid':
                     formula = 'Flesch-Kincaid Grade Level';
-                    readability = this._getFleschKincaid(docContent);
+                    docFunction = this._getFleschKincaid;
                     break;
                 case 'coleman-liau':
                     formula = 'Coleman-Liau Index';
-                    readability = this._getColemanLiau(docContent);
+                    docFunction = this._getColemanLiau;
                     break;
                 case 'dale-chall':
                     formula = 'Dale-Chall Readability';
-                    readability = this._getDaleChall(docContent);
+                    docFunction = this._getDaleChall;
                     break;
                 case 'smog':
                     formula = 'SMOG Formula';
-                    readability = this._getSMOG(docContent);
+                    docFunction = this._getSMOG;
                     break;
                 case 'spache':
                     formula = 'Spache Readability';
-                    readability = this._getSpache(docContent);
+                    docFunction = this._getSpache;
                     break;
                 default:
                     formula = 'Automated Readability';
-                    readability = this._getAutomatedReadability(docContent);
+                    docFunction = this._getAutomatedReadability;
                     break;
+            }
+
+            // fix doc and sentence functions
+            docFunction = docFunction.bind(this);
+            sentenceFunction = sentenceFunction.bind(this)
+
+            readability = docFunction(docContent);
+
+            // should we warn for difficult sentences?
+            let shouldWarn = false;
+            if (warningsEnabled) {
+                if (configuredFormula === 'flesch') {
+                    shouldWarn = readability < warnScore;
+                } else {
+                    shouldWarn = readability > warnScore;
+                }
+            }
+
+            // let's figure out the most difficult ones
+            if (shouldWarn) {
+                console.log("This document isn't very readable ;-;");
+
+                // difficulty score : sentence
+                let sentencesByDifficulty: [number, string][] = [];
+
+                // lazy splitting into sentences
+                const sentences: string[] = docContent.match(/([^\.!\?]+[\.!\?]+)|([^\.!\?]+$)/g) || [];
+
+                sentences.forEach(sentence => {
+                    sentence = sentence.trim();
+                    const score = sentenceFunction(sentence);
+                    // const score = sentence.length;
+                    sentencesByDifficulty.push([score, sentence]);
+
+                    // sort by most difficult to least
+                    if (configuredFormula === 'flesch') {
+                        sentencesByDifficulty.sort((a, b) => a[0] - b[0]);
+                    } else {
+                        sentencesByDifficulty.sort((a, b) => b[0] - a[0]);
+                    }
+                    // only keep 3 most difficult sentences
+                    while (sentencesByDifficulty.length > 3) {
+                        sentencesByDifficulty.pop();
+                    }
+                });
+
+                let cleanedWarnIndexes: [number, number][] = [];
+
+                sentencesByDifficulty.forEach(data => {
+                    const sentence = data[1];
+                    let index = docContent.indexOf(sentence);
+                    // find and mark repeated instances of the same sentence
+                    while (index != -1) {
+                        cleanedWarnIndexes.push([index, sentence.length]);
+                        index = docContent.indexOf(sentence, index+sentence.length);
+                    }
+                });
+                cleanedWarnIndexes.sort((a, b) => a[0] - b[0]);
+
+                // convert cleaned warn indexes to real ones
+                const sf = new SeamFinder(rawDocContent, docContent);
+
+                // add warnings for each set of indexes
+                let diagnostics: Diagnostic[] = [];
+                cleanedWarnIndexes.forEach(indexSet => {
+                    const realIndexes = sf.lookup(indexSet[0], indexSet[1]);
+                    const start = doc.positionAt(realIndexes.start);
+                    const end = doc.positionAt(realIndexes.start + realIndexes.length);
+                    diagnostics.push(new Diagnostic(new Range(start, end), 'This sentence is difficult to read', DiagnosticSeverity.Warning));
+                });
+
+                diagnosticMap.set(doc.uri.toString(), diagnostics);
+                resetDiagnostics();
             }
 
             // Update the status bar
@@ -157,23 +263,24 @@ class ReadabilityCheck {
         return Number(daleChallRead.toFixed(1));
     }
 
-    public _getFlesch(docContent: string): number {
-        let fleschRead = 0;
+    // Calculate readability based on the Flesch Readability Ease formula
+    private _calculateFlesch(sentences: number, words: number, syllables: number): number {
+        return 206.835 - (1.015 * (words / sentences)) - (84.6 * (syllables / words));
+    }
 
-        let sentenceCount = this._getSentenceCount(docContent);
-        console.log("Sentence count: " + sentenceCount);
+    public _getFleschSentence(sentence: string): number {
+        const words = this._getWordCount(sentence);
+        const syllables = this._getSyllableCount(sentence);
 
-        let wordCount = this._getWordCount(docContent);
-        console.log("Word count: " + wordCount);
+        return this._calculateFlesch(1, words, syllables);
+    }
 
-        let syllableCount = this._getSyllableCount(docContent);
-        console.log("Syllable count: " + syllableCount);
+    public _getFleschDoc(docContent: string): number {
+        const sentences = this._getSentenceCount(docContent);
+        const words = this._getWordCount(docContent);
+        const syllables = this._getSyllableCount(docContent);
 
-        // Calculate readability based on the Flesch Readability Ease formula
-        fleschRead = 206.835 - (1.015 * (wordCount / sentenceCount)) - (84.6 * (syllableCount / wordCount));
-        console.log("Calculated Flesch Reading Ease score: " + fleschRead);
-
-        return Math.round(fleschRead);
+        return Math.round(this._calculateFlesch(sentences, words, syllables));
     }
 
     public _getFleschKincaid(docContent: string): number {
@@ -347,4 +454,3 @@ class ReadabilityCheckController {
         this._readabilityCheck.updateReadability();
     }
 }
-

@@ -24,13 +24,63 @@
     "contributes": {
         "configuration": [
             {
-                "title": "ReadabilityCheck configuration",
+                "title": "ReadabilityCheck",
                 "properties": {
                     "readabilityCheck.formula": {
                         "type": "string",
                         "default": "automated-readability",
-                        "description": "The formula to use for calculating readability score. \n Valid options: automated-readability, coleman-liau, dale-chall, flesch,flesch-kincaid, smog, spache",
-                        "scope": "resource"
+                        "description": "The formula to use for calculating readability score",
+                        "scope": "resource",
+                        "enum": ["automated-readability", "coleman-liau", "dale-chall", "flesch","flesch-kincaid", "smog", "spache"],
+                        "enumDescriptions": [
+                            "The Automated Readability Index returns a score roughly matching the U.S. grade level it takes to understand a text.",
+                            "The Coleman-Liau index returns a score roughly matching the U.S. grade level it takes to understand a text.",
+                            "The Dale-Chall readability formula returns a score between around 1 and 10, where 5 or lower is easily understood by a 4th-grade student, 7 is easily understood by a 9th grader, and 10 is easily understood by a college student.",
+                            "The Flesch Reading-Ease test returns a score between 100 and 0, where 100 is very easy to read and 0 is best understood by university graduates.",
+                            "The Flesch-Kincaid grade level test returns a score roughly matching the U.S. grade level (or number of years of education) it takes to understand a text.",
+                            "The SMOG grade estimates the years of education needed to understand a text.",
+                            "The Spache readability formula returns a grade level score. It works best on texts for children up to fourth grade."
+                        ]
+                    },
+                    "readabilityCheck.warningsEnabled": {
+                        "type": "boolean",
+                        "default": true,
+                        "description": "Controls whether a warning is displayed when the document's readability score is harder than the defined score"
+                    },
+                    "readabilityCheck.warnScore.automated-readability": {
+                        "type": "number",
+                        "default": 10,
+                        "description": "Approximate U.S. grade level: 1 = Kindergarten, 5 = Fifth grade, 13 = College student"
+                    },
+                    "readabilityCheck.warnScore.coleman-liau": {
+                        "type": "number",
+                        "default": 10,
+                        "description": "Approximate U.S. grade level"
+                    },
+                    "readabilityCheck.warnScore.dale-chall": {
+                        "type": "number",
+                        "default": 10,
+                        "description": "0-10, where 5 or lower is easily understood by young students and 10 is for college students"
+                    },
+                    "readabilityCheck.warnScore.flesch": {
+                        "type": "number",
+                        "default": 50,
+                        "description": "0-100, where 0 is extremely difficult to read and 100 is very easy to read"
+                    },
+                    "readabilityCheck.warnScore.flesch-kincaid": {
+                        "type": "number",
+                        "default": 10,
+                        "description": "Approximate U.S. grade level"
+                    },
+                    "readabilityCheck.warnScore.smog": {
+                        "type": "number",
+                        "default": 10,
+                        "description": "Approximate years of education needed"
+                    },
+                    "readabilityCheck.warnScore.spache": {
+                        "type": "number",
+                        "default": 3,
+                        "description": "Approximate U.S. grade level. Works best on text for children up to fourth grade (for older children, the Dale-Chall formula is more appropriate)"
                     }
                 }
             }
